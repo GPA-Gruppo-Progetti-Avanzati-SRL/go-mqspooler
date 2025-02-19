@@ -21,25 +21,26 @@ type Spooler struct {
 	died            bool
 	currentSpan     trace.Span
 	currentTime     time.Time
+	fallback        IFallbackHandler
 }
 type IBusiness interface {
 	ProcessMessage(ctx context.Context, message string) *core.ApplicationError
 }
+type IFallbackHandler interface {
+	Handle(ctx context.Context, payload string, err *core.ApplicationError) *core.ApplicationError
+}
 
 var tracer = otel.Tracer("Spooler")
 
-func init() {
-	core.Provides(NewSpooler)
-}
-
 func NewSpooler(mq *mq.MQConsumer, metrics *Metrics,
-	lc fx.Lifecycle, business IBusiness, closer fx.Shutdowner) *Spooler {
+	lc fx.Lifecycle, business IBusiness, closer fx.Shutdowner, fallback IFallbackHandler) *Spooler {
 
 	spooler := &Spooler{
 		mq:       mq,
 		closer:   closer,
 		metrics:  *metrics,
 		business: business,
+		fallback: fallback,
 	}
 
 	spooler.shutdownChannel = make(chan bool)
@@ -53,6 +54,7 @@ func NewSpooler(mq *mq.MQConsumer, metrics *Metrics,
 
 			// Nel caso che abbia ricevuto una chiusura dal esterno per esempio un SIGTERM
 			if !spooler.died {
+				log.Info().Msg("Shutdown")
 				spooler.shutdownChannel <- true
 			}
 
@@ -101,7 +103,14 @@ func (s *Spooler) Start() {
 			s.currentSpan = span
 			s.currentTime = time.Now()
 			if errProcessing := s.business.ProcessMessage(ctx, *message); errProcessing != nil {
-				s.Die(errProcessing)
+				if errProcessing.IsTechnicalError() {
+					s.Die(errProcessing)
+					return
+				}
+				s.metrics.MessageInFallback.Add(ctx, 1)
+				if errFallback := s.fallback.Handle(ctx, *message, errProcessing); errFallback != nil {
+					s.Die(errFallback)
+				}
 				return
 			}
 			s.mq.Commit(false)

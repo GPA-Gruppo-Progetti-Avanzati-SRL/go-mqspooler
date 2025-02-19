@@ -9,8 +9,8 @@ import (
 var meter = otel.Meter("spooler")
 
 type Metrics struct {
-	MessageLatency metric.Int64Histogram
-	//MessageInError metric.Int64Counter
+	MessageLatency    metric.Int64Histogram
+	MessageInFallback metric.Int64Counter
 }
 
 func newMetrics() *Metrics {
@@ -25,13 +25,12 @@ func newMetrics() *Metrics {
 		// TODO bilancia il bucket
 		//metric.WithExplicitBucketBoundaries(100, 2000),
 	)
-	//TODO handle inside fallback
-	/*
-		metrics.MessageInError, _ = meter.Int64Counter(
-			"spooler.message.count.error",
-			metric.WithUnit("{message}"),
-			metric.WithDescription("Number message that go in error"),
-			)*/
+
+	metrics.MessageInFallback, _ = meter.Int64Counter(
+		"spooler.message.count.fallback",
+		metric.WithUnit("{message}"),
+		metric.WithDescription("Number message that go in fallback"),
+	)
 
 	return metrics
 
