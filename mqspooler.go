@@ -65,8 +65,9 @@ func NewSpooler(mq *mq.MQConsumer, metrics *Metrics,
 	return spooler
 }
 
-func (s *Spooler) Die(err error) {
-	log.Debug().Msg("Call Die")
+func (s *Spooler) Die(err *core.ApplicationError) {
+
+	log.Error().Err(err).Msgf("Call Die %s - %s", err.Code, err.Message)
 	if s.currentSpan != nil {
 		s.currentSpan.SetStatus(codes.Error, err.Error())
 		s.currentSpan.End()
