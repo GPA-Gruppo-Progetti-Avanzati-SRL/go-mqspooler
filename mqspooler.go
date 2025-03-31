@@ -83,6 +83,7 @@ func (s *Spooler) Start() {
 	defer func() {
 		log.Trace().Msg("Main loop exit")
 		s.died = true
+
 	}()
 
 	for {
@@ -112,7 +113,6 @@ func (s *Spooler) Start() {
 				if errFallback := s.fallback.Handle(ctx, *message, errProcessing); errFallback != nil {
 					s.Die(errFallback)
 				}
-				return
 			}
 			s.mq.Commit(false)
 			s.currentSpan.End()
@@ -121,5 +121,5 @@ func (s *Spooler) Start() {
 		}
 
 	}
-
+	s.closer.Shutdown()
 }
