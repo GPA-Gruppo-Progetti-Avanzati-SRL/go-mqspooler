@@ -81,9 +81,9 @@ func (s *Spooler) Die(err *core.ApplicationError) {
 func (s *Spooler) Start() {
 
 	defer func() {
-		log.Trace().Msg("Main loop exit")
+		log.Trace().Msg("Shutting down")
 		s.died = true
-
+		s.closer.Shutdown()
 	}()
 
 	for {
@@ -121,5 +121,5 @@ func (s *Spooler) Start() {
 		}
 
 	}
-	s.closer.Shutdown()
+
 }
