@@ -112,6 +112,7 @@ func (s *Spooler) Start() {
 				s.metrics.MessageInFallback.Add(ctx, 1)
 				if errFallback := s.fallback.Handle(ctx, *message, errProcessing); errFallback != nil {
 					s.Die(errFallback)
+					return
 				}
 			}
 			s.mq.Commit(false)
