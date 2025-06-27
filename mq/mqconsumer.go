@@ -110,18 +110,23 @@ func (mqconsumer *MQConsumer) ReadMessage() *string {
 	if rcvBody != nil {
 		mqconsumer.CurrentTransactionMessage++
 		mqconsumer.metrics.TotalConsumedMessage.Add(context.Background(), 1)
-		if !mqconsumer.CheckLength(rcvBody) {
-			return nil
-		}
+
+		bc := mqconsumer.CheckLength(rcvBody)
+
 		var input string
 		if mqconsumer.Config.DecodeBody {
 			input = decodeBytes(*rcvBody)
+		} else {
+			input = string(*rcvBody)
 		}
 		log.Trace().Msg("|" + input + "|")
+		if bc {
+			log.Error().Msg("|" + input + "|")
+			return nil
+		}
 		return &input
 
 	} else {
-
 		log.Trace().Msg("Sleeping...")
 		mqconsumer.metrics.TotalSleep.Add(context.Background(), 1)
 		time.Sleep(mqconsumer.Config.SleepNoMessage)
@@ -160,7 +165,7 @@ func (mqconsumer *MQConsumer) CheckLength(rcvBody *[]byte) bool {
 	lenbody := len(*rcvBody)
 
 	if lenbody != mqconsumer.Config.Length {
-		log.Warn().Msgf("Lunghezza messaggio non corretta %d\n", lenbody)
+		log.Error().Msgf("Lunghezza messaggio non corretta %d\n", lenbody)
 		mqconsumer.TransactedContext.Commit()
 		mqconsumer.metrics.MsgError.Add(context.Background(), 1)
 		return false
