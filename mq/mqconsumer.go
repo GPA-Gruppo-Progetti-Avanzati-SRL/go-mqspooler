@@ -120,7 +120,7 @@ func (mqconsumer *MQConsumer) ReadMessage() *string {
 			input = string(*rcvBody)
 		}
 		log.Trace().Msg("|" + input + "|")
-		if bc {
+		if !bc {
 			log.Error().Msg("|" + input + "|")
 			return nil
 		}
@@ -165,7 +165,7 @@ func (mqconsumer *MQConsumer) CheckLength(rcvBody *[]byte) bool {
 	lenbody := len(*rcvBody)
 
 	if lenbody != mqconsumer.Config.Length {
-		log.Error().Msgf("Lunghezza messaggio non corretta %d\n", lenbody)
+		log.Error().Msgf("Lunghezza messaggio non corretta %d", lenbody)
 		mqconsumer.TransactedContext.Commit()
 		mqconsumer.metrics.MsgError.Add(context.Background(), 1)
 		return false
